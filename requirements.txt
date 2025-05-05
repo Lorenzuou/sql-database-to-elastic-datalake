@@ -1,0 +1,7 @@
+elasticsearch==8.11.0
+sqlalchemy==2.0.25
+pandas==2.1.4
+python-dotenv==1.0.0
+tqdm==4.66.1
+psycopg2-binary==2.9.9  # For PostgreSQL support
+mysql-connector-python==8.2.0  # For MySQL support 
