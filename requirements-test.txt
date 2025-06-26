@@ -1,0 +1,9 @@
+pytest==7.4.3
+pytest-mock==3.12.0
+pytest-cov==4.1.0
+pandas==2.1.3
+pandas-stubs==2.1.0.230810
+sqlalchemy==2.0.23
+sqlalchemy-stubs==0.4
+elasticsearch==8.11.0
+tqdm==4.66.1 

@@ -9,6 +9,7 @@ import config
 from  json_encoder import json_serialize, CustomJSONEncoder
 import json
 from flask import Flask, request, jsonify
+import hashlib
 
 # Configure logging
 logging.basicConfig(
@@ -68,6 +69,18 @@ class DataLakeSync:
             return f'`{table_name}`'
         return table_name
 
+    def _generate_document_id(self, doc: Dict[str, Any]) -> str:
+        """Generate a unique document ID based on document content.
+        
+        This ensures that the same record with different states gets a unique ID.
+        """
+        # Create a string that uniquely represents this document
+        # Include all fields in the hash to ensure uniqueness across state changes
+        content_str = json_serialize(doc)
+        
+        # Create a hash of the content string to use as the document ID
+        return hashlib.md5(content_str.encode('utf-8')).hexdigest()
+
     def sync_table_to_elasticsearch(self, table_name: str):
         """Sync a single table to Elasticsearch."""
         # Convert table name to lowercase for Elasticsearch index
@@ -82,8 +95,10 @@ class DataLakeSync:
                 "mappings": {
                     "dynamic": True,
                     "properties": {
-                        field: {
-                           "type": (
+                        (
+                            f"{table_name.lower()}_{field}" if field != "data" else "data"
+                        ): {
+                            "type": (
                                 "object" if "json" in type_str.lower()
                                 else "keyword" if "varchar" in type_str.lower()
                                 else "text" if "text" in type_str.lower()
@@ -94,7 +109,7 @@ class DataLakeSync:
                             )
                         }
                         for field, type_str in self.get_table_schema(table_name).items()
-                    }
+                    } | {"table": {"type": "keyword"}}  # adiciona o campo de controle
                 },
                 "settings": {
                     "refresh_interval": config.SYNC_CONFIG['refresh_interval']
@@ -125,18 +140,36 @@ class DataLakeSync:
                 # Prepare documents for bulk indexing
                 actions = []
                 for _, row in df.iterrows():
-                    doc = row.to_dict()
+                    raw_doc = row.to_dict()
 
                     # Se o campo 'data' for string, converta para dict
-                    if isinstance(doc.get('data'), str):
+                    if isinstance(raw_doc.get('data'), str):
                         try:
-                            doc['data'] = json.loads(doc['data'])
+                            raw_doc['data'] = json.loads(raw_doc['data'])
                         except json.JSONDecodeError:
-                            logger.warning(f"Campo 'data' não é um JSON válido: {doc['data']}")
+                            logger.warning(f"Campo 'data' não é um JSON válido: {raw_doc['data']}")
+
+                    # Prefixar campos com o nome da tabela, exceto 'data'
+                    namespaced_doc = {
+                        f"{table_name.lower()}_{k}": v
+                        for k, v in raw_doc.items()
+                        if k != "data"
+                    }
+
+                    # Manter o campo data como objeto (se existir)
+                    if "data" in raw_doc:
+                        namespaced_doc["data"] = raw_doc["data"]
+
+                    # Adicionar campo de identificação da origem da tabela
+                    namespaced_doc["table"] = table_name.lower()
+                    
+                    # Generate a unique document ID
+                    doc_id = self._generate_document_id(namespaced_doc)
 
                     actions.append({
                         "_index": index_name,
-                        "_source": json.loads(json_serialize(doc))
+                        "_id": doc_id,  # Use the generated unique ID
+                        "_source": json.loads(json_serialize(namespaced_doc))
                     })
 
                 

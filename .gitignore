@@ -1,9 +1,16 @@
 # Python cache files
+__pycache__/
+*/__pycache__/
 **/__pycache__/
+*.pyc
+*/*.pyc
 **/*.pyc
+
 
 # Environment files
 **/*.env
 
 # Elasticsearch data folder
+elasticsearch-data/
+*/elasticsearch-data/
 **/elasticsearch-data/

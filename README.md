@@ -1,36 +1,44 @@
 # Data Lake Sync Application
 
-This application synchronizes your database tables with Elasticsearch, creating a searchable data lake where you can easily search and visualize your data using Kibana.
+A comprehensive data synchronization system that creates a searchable data lake by syncing your database tables with Elasticsearch. This application provides both automated data synchronization and a REST API for real-time data operations, making it easy to search and visualize your data using Kibana.
 
-## Features
+## 🚀 Features
 
-- Automatically detects and syncs all tables from your database
-- Supports PostgreSQL and MySQL databases
-- Creates appropriate Elasticsearch mappings based on column types
-- Progress tracking with tqdm
-- Batch processing for efficient data transfer
-- Error handling and logging
-- Docker support for easy deployment
-- Kibana integration for data visualization
+- **Multi-Database Support**: Works with PostgreSQL and MySQL databases
+- **Elasticsearch Integration**: Automatic indexing with optimized mappings
+- **REST API**: Full CRUD operations for tickets, users, modules, and more
+- **Real-time Sync**: Incremental updates and batch processing
+- **Search Capabilities**: Advanced search with Elasticsearch queries
+- **Docker Support**: Easy deployment with Docker Compose
+- **Data Validation**: Comprehensive data sanitization and validation
+- **Historical Tracking**: Maintains data lineage and change history
 
-## Prerequisites
+## 📋 Prerequisites
 
-- Python 3.8 or higher
+- Python 3.8+
 - Docker and Docker Compose
 - PostgreSQL or MySQL database
-- Required Python packages (see requirements.txt)
+- Elasticsearch 8.11.0
+- Kibana 8.11.0
 
-## Installation
+## 🛠️ Installation
 
-1. Clone this repository
-2. Install the required packages:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 1. Clone the Repository
 
-## Configuration
+```bash
+git clone <repository-url>
+cd simplelake
+```
 
-Create a `.env` file in the project root with the following variables:
+### 2. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Environment Configuration
+
+Create a `.env` file in the root directory:
 
 ```env
 # Database Configuration
@@ -41,62 +49,328 @@ DB_USER=your_user
 DB_PASSWORD=your_password
 DB_TYPE=postgresql  # or mysql
 
-# Elasticsearch Configuration (Docker)
+# Elasticsearch Configuration
 ES_HOST=localhost
 ES_PORT=9200
 ES_SCHEME=http
+
+# Optional: Enable Search API
+SEARCH_API_ENABLED=true
 ```
 
-## Running with Docker
+### 4. Start Infrastructure with Docker
 
-1. Start Elasticsearch and Kibana:
-   ```bash
-   docker-compose up -d
-   ```
+```bash
+docker-compose up -d
+```
 
-2. Wait for the services to start (about 30 seconds)
+This will start:
+- Elasticsearch on port 9200
+- Kibana on port 5601
 
-3. Run the sync application:
-   ```bash
-   python data_lake_sync.py
-   ```
+## 🏗️ Project Structure
 
-4. Access Kibana at http://localhost:5601
+```
+simplelake/
+├── src/
+│   ├── config.py              # Configuration management
+│   ├── db_connector.py        # Database connection and queries
+│   ├── es_connector.py        # Elasticsearch operations
+│   ├── data_sync.py           # Main synchronization logic
+│   ├── document_utils.py      # Document processing utilities
+│   ├── json_encoder.py        # Custom JSON serialization
+│   ├── utils.py               # Shared utilities
+│   └── routes/                # REST API endpoints
+│       ├── ticket_routes.py   # Ticket operations
+│       ├── user_routes.py     # User operations
+│       ├── module_routes.py   # Module operations
+│       ├── status_routes.py   # Status operations
+│       ├── label_routes.py    # Label operations
+│       └── data_source_routes.py # Data source operations
+├── tests/                     # Test suite
+├── data_lake_sync.py          # Legacy sync script
+├── server.py                  # Flask application server
+├── docker-compose.yml         # Docker infrastructure
+├── requirements.txt           # Python dependencies
+└── schema.sql                # Database schema
+```
 
-## Visualizing Data in Kibana
+## 🚀 Usage
 
-Once the sync is complete, follow these steps to visualize your data:
+### Starting the Application
 
-1. Open Kibana in your browser (http://localhost:5601)
+```bash
+python server.py
+```
 
-2. Create an index pattern:
-   - Go to "Stack Management" > "Index Patterns"
-   - Click "Create index pattern"
-   - Enter `data_lake_*` as the pattern
-   - Click "Next step"
-   - Select a time field if available, or click "Create index pattern"
+The server will start on port 5000 with the following endpoints:
 
-   Note: When searching for specific tables, remember that index names are lowercase,
-   regardless of the original table name casing.
+- `GET /health` - Health check
+- `POST /tickets/tickets` - Add new ticket
+- `POST /tickets/batch` - Add multiple tickets
+- `POST /tickets/sync` - Sync tickets from database
+- `GET /users/users` - Get all users
+- `POST /users/sync` - Sync users from database
+- `GET /modules/modules` - Get all modules
+- `POST /modules/sync` - Sync modules from database
+- And more...
 
-3. Explore your data:
-   - Go to "Discover" to view and search your data
-   - Use "Visualize" to create charts and graphs
-   - Create dashboards to combine multiple visualizations
+### Data Synchronization
 
-4. Example visualizations you can create:
-   - Bar charts for categorical data
-   - Line charts for time series data
-   - Pie charts for distribution analysis
-   - Data tables for detailed views
-   - Maps for geographical data
+#### Manual Sync
 
-## Notes
+```bash
+python -c "
+from src.data_sync import DataLakeSync
+sync = DataLakeSync()
+sync.sync_all_tables()
+"
+```
 
-- Each table is synced to a separate Elasticsearch index with the prefix `data_lake_`
-- Table names are converted to lowercase for Elasticsearch indices due to Elasticsearch naming requirements
-- The application handles data in batches to manage memory usage
-- Progress is shown for each table being synced
-- Errors are logged but won't stop the entire process
-- The Docker setup uses a single-node Elasticsearch configuration for development
-- Data is persisted in a Docker volume named `elasticsearch-data`# sql-database-to-elastic-datalake
+#### Individual Table Sync
+
+```python
+from src.data_sync import DataLakeSync
+
+sync = DataLakeSync()
+
+# Sync specific tables
+sync.sync_data_sources()
+sync.sync_users()
+sync.sync_modules()
+sync.sync_statuses()
+sync.sync_labels()
+```
+
+### API Examples
+
+#### Add a New Ticket
+
+```bash
+curl -X POST http://localhost:5000/tickets/tickets \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticket_id": "123",
+    "title": "Sample Ticket",
+    "description": "This is a sample ticket",
+    "status": "open",
+    "priority": "high"
+  }'
+```
+
+#### Search Tickets
+
+```bash
+curl -X POST http://localhost:5000/tickets/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": {
+      "match": {
+        "title": "sample"
+      }
+    }
+  }'
+```
+
+## 🔧 Configuration
+
+### Database Configuration
+
+The application supports both PostgreSQL and MySQL:
+
+```python
+# PostgreSQL
+DB_TYPE=postgresql
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=your_database
+DB_USER=your_user
+DB_PASSWORD=your_password
+
+# MySQL
+DB_TYPE=mysql
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=your_database
+DB_USER=your_user
+DB_PASSWORD=your_password
+```
+
+### Elasticsearch Configuration
+
+```python
+ES_HOST=localhost
+ES_PORT=9200
+ES_SCHEME=http  # or https for secure connections
+```
+
+### Sync Configuration
+
+```python
+SYNC_CONFIG = {
+    'batch_size': 1000,        # Documents per batch
+    'index_prefix': 'data_lake_',  # Index naming prefix
+    'refresh_interval': '1s'   # Index refresh interval
+}
+```
+
+## 📊 Data Model
+
+The application syncs the following entities:
+
+### Core Entities
+
+- **Tickets**: Main workflow items with labels and status
+- **Users**: System users with roles and preferences
+- **Modules**: System modules with hierarchical structure
+- **Statuses**: Workflow status definitions
+- **Labels**: Categorization labels for tickets
+- **Data Sources**: External data source configurations
+
+### Database Schema
+
+The application expects tables in a `copy` schema (or default schema) with the following structure:
+
+- `Ticket` - Main ticket data
+- `User` - User information
+- `Module` - Module definitions
+- `Status` - Status definitions
+- `Label` - Label definitions
+- `DataSource` - Data source configurations
+- `TicketLabel` - Many-to-many relationship
+- `TicketStatus` - Status tracking
+
+## 🔍 Search Capabilities
+
+### Basic Search
+
+```python
+# Simple text search
+{
+    "query": {
+        "match": {
+            "title": "search term"
+        }
+    }
+}
+```
+
+### Advanced Search
+
+```python
+# Complex queries with filters
+{
+    "query": {
+        "bool": {
+            "must": [
+                {"match": {"title": "urgent"}},
+                {"term": {"status": "open"}}
+            ],
+            "filter": [
+                {"range": {"created_at": {"gte": "2024-01-01"}}}
+            ]
+        }
+    }
+}
+```
+
+## 🧪 Testing
+
+Run the test suite:
+
+```bash
+# Install test dependencies
+pip install -r requirements-test.txt
+
+# Run tests
+pytest
+
+# Run with coverage
+pytest --cov=src
+```
+
+## 🐳 Docker Deployment
+
+### Development
+
+```bash
+# Start infrastructure
+docker-compose up -d
+
+# Run application
+python server.py
+```
+
+### Production
+
+Create a production Dockerfile:
+
+```dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+EXPOSE 5000
+
+CMD ["python", "server.py"]
+```
+
+## 📈 Monitoring
+
+### Health Check
+
+```bash
+curl http://localhost:5000/health
+```
+
+### Elasticsearch Status
+
+```bash
+curl http://localhost:9200/_cluster/health
+```
+
+### Index Statistics
+
+```bash
+curl http://localhost:9200/_cat/indices?v
+```
+
+## 🔒 Security Considerations
+
+- Use environment variables for sensitive configuration
+- Implement proper authentication for production use
+- Enable Elasticsearch security features in production
+- Use HTTPS for external communications
+- Regularly update dependencies
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Submit a pull request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For issues and questions:
+
+1. Check the existing issues
+2. Create a new issue with detailed information
+3. Include logs and error messages
+4. Provide steps to reproduce the problem
+
+## 🔄 Version History
+
+- **v0.1.0**: Initial release with basic sync functionality
+- Added REST API endpoints
+- Multi-database support
+- Docker deployment
+- Comprehensive testing suite

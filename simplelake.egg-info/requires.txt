@@ -1,0 +1,11 @@
+pandas
+sqlalchemy
+elasticsearch
+tqdm
+
+[test]
+pytest
+pytest-mock
+pytest-cov
+pandas-stubs
+sqlalchemy-stubs
